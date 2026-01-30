@@ -133,3 +133,49 @@ export interface GlobalI18n {
   $t?: GlobalTranslateFunction;
   $i18n?: I18nService;
 }
+
+/**
+ * 全局类型声明
+ *
+ * 当导入 @dreamer/i18n 时，全局 $t 和 $i18n 类型自动可用
+ * 无需额外配置或复制文件
+ */
+declare global {
+  /**
+   * 全局翻译函数
+   *
+   * 使用前需要先调用 i18n.install()
+   *
+   * @example
+   * ```typescript
+   * // 简单翻译
+   * const hello = $t("hello");
+   *
+   * // 带参数插值
+   * const welcome = $t("welcome", { name: "张三" });
+   *
+   * // 嵌套键
+   * const menuHome = $t("menu.home");
+   * ```
+   */
+  const $t: GlobalTranslateFunction | undefined;
+
+  /**
+   * 全局 i18n 服务实例
+   *
+   * 使用前需要先调用 i18n.install()
+   *
+   * @example
+   * ```typescript
+   * // 获取当前语言
+   * const locale = $i18n?.getLocale();
+   *
+   * // 切换语言
+   * $i18n?.setLocale("en-US");
+   *
+   * // 格式化
+   * $i18n?.formatNumber(1234.56);
+   * ```
+   */
+  const $i18n: I18nService | undefined;
+}

@@ -137,6 +137,23 @@ globalThis.$t("hello");
 globalThis.$i18n.setLocale("en-US");
 ```
 
+### TypeScript 全局类型支持
+
+导入 `@dreamer/i18n` 后，全局 `$t` 和 `$i18n` 类型自动可用，无需额外配置：
+
+```typescript
+import { createI18n } from "@dreamer/i18n";
+
+const i18n = createI18n({ ... });
+i18n.install();
+
+// TypeScript 自动识别全局类型
+$t("hello");           // ✅ 类型正确
+$i18n?.setLocale("en-US"); // ✅ 类型正确
+```
+
+> 注意：全局变量使用可选链 `?.` 更安全，因为在 `install()` 之前它们是 `undefined`。
+
 ### 数字和货币格式化
 
 ```typescript
