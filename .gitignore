@@ -1,0 +1,34 @@
+# Deno 相关
+.deno/
+deno.lock
+*.so
+*.dylib
+*.dll
+
+# 依赖
+node_modules
+package.json
+bun.lock
+
+# 构建输出
+dist/
+build/
+out/
+
+# 环境变量
+.env
+.env.local
+
+# IDE
+.cursor
+.idea
+
+# 系统文件
+.DS_Store
+Thumbs.db
+
+# 测试数据
+tests/data/
+tests/**/data/
+.snapshots/
+.npmrc
