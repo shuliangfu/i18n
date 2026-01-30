@@ -139,20 +139,29 @@ globalThis.$i18n.setLocale("en-US");
 
 ### TypeScript 全局类型支持
 
-导入 `@dreamer/i18n` 后，全局 `$t` 和 `$i18n` 类型自动可用，无需额外配置：
+如需在 TypeScript 中直接使用全局 `$t` 和 `$i18n`，需要添加类型声明。
+
+**方法 1：在项目中创建 `i18n.d.ts`**
 
 ```typescript
-import { createI18n } from "@dreamer/i18n";
+// i18n.d.ts
+import type { I18nService, TranslationParams } from "@dreamer/i18n";
 
-const i18n = createI18n({ ... });
-i18n.install();
-
-// TypeScript 自动识别全局类型
-$t("hello");           // ✅ 类型正确
-$i18n?.setLocale("en-US"); // ✅ 类型正确
+declare global {
+  const $t: ((key: string, params?: TranslationParams) => string) | undefined;
+  const $i18n: I18nService | undefined;
+}
 ```
 
-> 注意：全局变量使用可选链 `?.` 更安全，因为在 `install()` 之前它们是 `undefined`。
+**方法 2：使用导出的便捷方法（推荐）**
+
+```typescript
+import { $t, $i18n } from "@dreamer/i18n";
+
+// 直接使用导入的方法，无需全局类型声明
+$t("hello");
+$i18n.setLocale("en-US");
+```
 
 ### 数字和货币格式化
 
