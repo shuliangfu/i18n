@@ -400,7 +400,6 @@ export class I18n implements I18nService {
       return true;
     }
 
-    const oldLocale = this.currentLocale;
     this.currentLocale = locale;
 
     // 语言切换时清除翻译缓存（缓存键包含语言前缀，但全部清除更简单高效）
@@ -408,37 +407,10 @@ export class I18n implements I18nService {
       this.translationCache.clear();
     }
 
-    // 通知回调
+    // 通知回调（用于语言切换监听）
     this.notifyCallbacks(locale);
 
-    // 触发全局事件（供 render 等库监听）
-    this.dispatchLanguageChangedEvent(locale, oldLocale);
-
     return true;
-  }
-
-  /**
-   * 触发语言切换全局事件
-   *
-   * @param locale - 新语言
-   * @param oldLocale - 旧语言
-   */
-  private dispatchLanguageChangedEvent(
-    locale: string,
-    oldLocale: string,
-  ): void {
-    // 仅在浏览器环境中触发
-    if (typeof globalThis.dispatchEvent === "function") {
-      globalThis.dispatchEvent(
-        new CustomEvent("i18n:language-changed", {
-          detail: {
-            locale,
-            oldLocale,
-            translations: this.translations[locale] || {},
-          },
-        }),
-      );
-    }
   }
 
   /**
