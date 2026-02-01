@@ -68,7 +68,10 @@ const HTML_ESCAPE_REGEX = /[&<>"']/g;
  * @returns 转义后的字符串
  */
 function escapeHtml(str: string): string {
-  return str.replace(HTML_ESCAPE_REGEX, (char) => HTML_ESCAPE_MAP[char] || char);
+  return str.replace(
+    HTML_ESCAPE_REGEX,
+    (char) => HTML_ESCAPE_MAP[char] || char,
+  );
 }
 
 /**
@@ -116,6 +119,22 @@ export class I18n implements I18nService {
   private callbacks: Set<LocaleChangeCallback> = new Set();
   /** 翻译键缓存（性能优化：缓存已解析的嵌套键路径） */
   private keyCache: Map<string, string[]> = new Map();
+  /** 是否启用翻译结果缓存 */
+  private cacheEnabled: boolean;
+  /** 翻译结果缓存（LRU 策略） */
+  private translationCache: Map<string, string> = new Map();
+  /** 翻译缓存最大条数 */
+  private cacheMaxSize: number;
+  /** 持久化缓存配置 */
+  private persistentCacheConfig: {
+    enabled: boolean;
+    storage: "localStorage" | "sessionStorage";
+    prefix: string;
+    maxEntries: number;
+    ttl: number;
+  };
+  /** 已加载的 URL 缓存（内存层，避免重复请求） */
+  private loadedUrls: Map<string, TranslationData> = new Map();
 
   /**
    * 创建 I18n 实例
@@ -130,7 +149,17 @@ export class I18n implements I18nService {
     this.translations = options.translations ?? {};
     this.fallbackBehavior = options.fallbackBehavior ?? "key";
     this.escapeHtmlEnabled = options.escapeHtml ?? false;
-    this.currentLocale = this.defaultLocale;
+    this.cacheEnabled = options.enableCache ?? false;
+    this.cacheMaxSize = options.cacheMaxSize ?? 500;
+
+    // 持久化缓存配置
+    this.persistentCacheConfig = {
+      enabled: options.persistentCache?.enabled ?? false,
+      storage: options.persistentCache?.storage ?? "localStorage",
+      prefix: options.persistentCache?.prefix ?? "i18n_cache_",
+      maxEntries: options.persistentCache?.maxEntries ?? 10,
+      ttl: options.persistentCache?.ttl ?? 7 * 24 * 60 * 60 * 1000, // 默认 7 天
+    };
 
     // 日期格式化选项
     this.dateFormat = {
@@ -145,6 +174,18 @@ export class I18n implements I18nService {
       thousandsSeparator: options.numberFormat?.thousandsSeparator ?? ",",
       decimalSeparator: options.numberFormat?.decimalSeparator ?? ".",
     };
+
+    // 自动检测语言
+    if (options.autoDetect) {
+      const detected = this.detectLocale();
+      if (detected && this.localesSet.has(detected)) {
+        this.currentLocale = detected;
+      } else {
+        this.currentLocale = this.defaultLocale;
+      }
+    } else {
+      this.currentLocale = this.defaultLocale;
+    }
   }
 
   /**
@@ -173,7 +214,10 @@ export class I18n implements I18nService {
    * @param key - 键路径（支持点分隔，如 "common.greeting"）
    * @returns 翻译值或 undefined
    */
-  private getNestedValue(data: TranslationData, key: string): string | undefined {
+  private getNestedValue(
+    data: TranslationData,
+    key: string,
+  ): string | undefined {
     // 使用缓存的键路径
     const keys = this.parseKey(key);
     let current: TranslationData | string = data;
@@ -243,6 +287,37 @@ export class I18n implements I18nService {
   }
 
   /**
+   * 生成翻译缓存键
+   *
+   * @param key - 翻译键
+   * @param params - 参数
+   * @returns 缓存键
+   */
+  private getCacheKey(key: string, params?: TranslationParams): string {
+    if (!params || Object.keys(params).length === 0) {
+      return `${this.currentLocale}:${key}`;
+    }
+    return `${this.currentLocale}:${key}:${JSON.stringify(params)}`;
+  }
+
+  /**
+   * 添加到翻译缓存（LRU 策略）
+   *
+   * @param cacheKey - 缓存键
+   * @param value - 翻译结果
+   */
+  private addToCache(cacheKey: string, value: string): void {
+    // 如果超出大小限制，删除最旧的条目（Map 保持插入顺序）
+    if (this.translationCache.size >= this.cacheMaxSize) {
+      const firstKey = this.translationCache.keys().next().value;
+      if (firstKey !== undefined) {
+        this.translationCache.delete(firstKey);
+      }
+    }
+    this.translationCache.set(cacheKey, value);
+  }
+
+  /**
    * 翻译函数
    *
    * @param key - 翻译键（支持点分隔路径，如 "nav.home"）
@@ -257,12 +332,26 @@ export class I18n implements I18nService {
    * ```
    */
   t(key: string, params?: TranslationParams): string {
+    // 如果启用缓存，先检查缓存
+    if (this.cacheEnabled) {
+      const cacheKey = this.getCacheKey(key, params);
+      const cached = this.translationCache.get(cacheKey);
+      if (cached !== undefined) {
+        return cached;
+      }
+    }
+
     // 尝试从当前语言获取翻译
     const localeData = this.translations[this.currentLocale];
     if (localeData) {
       const value = this.getNestedValue(localeData, key);
       if (value) {
-        return this.interpolate(value, params);
+        const result = this.interpolate(value, params);
+        // 缓存结果
+        if (this.cacheEnabled) {
+          this.addToCache(this.getCacheKey(key, params), result);
+        }
+        return result;
       }
     }
 
@@ -272,7 +361,12 @@ export class I18n implements I18nService {
       if (defaultData) {
         const value = this.getNestedValue(defaultData, key);
         if (value) {
-          return this.interpolate(value, params);
+          const result = this.interpolate(value, params);
+          // 缓存结果
+          if (this.cacheEnabled) {
+            this.addToCache(this.getCacheKey(key, params), result);
+          }
+          return result;
         }
       }
     }
@@ -309,6 +403,11 @@ export class I18n implements I18nService {
     const oldLocale = this.currentLocale;
     this.currentLocale = locale;
 
+    // 语言切换时清除翻译缓存（缓存键包含语言前缀，但全部清除更简单高效）
+    if (this.cacheEnabled) {
+      this.translationCache.clear();
+    }
+
     // 通知回调
     this.notifyCallbacks(locale);
 
@@ -324,7 +423,10 @@ export class I18n implements I18nService {
    * @param locale - 新语言
    * @param oldLocale - 旧语言
    */
-  private dispatchLanguageChangedEvent(locale: string, oldLocale: string): void {
+  private dispatchLanguageChangedEvent(
+    locale: string,
+    oldLocale: string,
+  ): void {
     // 仅在浏览器环境中触发
     if (typeof globalThis.dispatchEvent === "function") {
       globalThis.dispatchEvent(
@@ -371,6 +473,245 @@ export class I18n implements I18nService {
       this.translations[locale] = {};
     }
     this.mergeDeep(this.translations[locale], data);
+
+    // 翻译数据更新时清除缓存
+    if (this.cacheEnabled) {
+      this.translationCache.clear();
+    }
+  }
+
+  /**
+   * 异步加载翻译数据
+   *
+   * 从 URL 加载 JSON 格式的翻译数据，支持多级缓存：
+   * 1. 内存缓存（当前会话）
+   * 2. 持久化缓存（localStorage/sessionStorage）
+   *
+   * @param locale - 语言代码
+   * @param url - 翻译数据 URL（建议使用带 hash 的 URL 以支持缓存失效）
+   * @throws 如果请求失败或数据格式错误
+   *
+   * @example
+   * ```typescript
+   * // 从服务器加载翻译（带 hash 的 URL 会自动缓存失效）
+   * await i18n.loadTranslationsAsync("zh-CN", "/locales/zh-CN.abc123.json");
+   *
+   * // 从 CDN 加载
+   * await i18n.loadTranslationsAsync("en-US", "https://cdn.example.com/i18n/en-US.json");
+   * ```
+   */
+  async loadTranslationsAsync(locale: string, url: string): Promise<void> {
+    // 1. 检查内存缓存
+    const memoryData = this.loadedUrls.get(url);
+    if (memoryData) {
+      this.loadTranslations(locale, memoryData);
+      return;
+    }
+
+    // 2. 检查持久化缓存
+    if (this.persistentCacheConfig.enabled) {
+      const cachedData = this.getFromPersistentCache(url);
+      if (cachedData) {
+        // 存入内存缓存
+        this.loadedUrls.set(url, cachedData);
+        this.loadTranslations(locale, cachedData);
+        return;
+      }
+    }
+
+    // 3. 从网络加载
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(
+        `[I18n] 加载翻译失败: ${response.status} ${response.statusText}`,
+      );
+    }
+
+    const data = await response.json() as TranslationData;
+
+    // 4. 存入内存缓存
+    this.loadedUrls.set(url, data);
+
+    // 5. 存入持久化缓存
+    if (this.persistentCacheConfig.enabled) {
+      this.saveToPersistentCache(url, data);
+    }
+
+    this.loadTranslations(locale, data);
+  }
+
+  /**
+   * 获取持久化存储对象
+   */
+  private getStorage(): Storage | null {
+    if (typeof globalThis.localStorage === "undefined") {
+      return null;
+    }
+    return this.persistentCacheConfig.storage === "sessionStorage"
+      ? globalThis.sessionStorage
+      : globalThis.localStorage;
+  }
+
+  /**
+   * 从持久化缓存读取
+   *
+   * @param url - 缓存键（URL）
+   * @returns 缓存的翻译数据或 null
+   */
+  private getFromPersistentCache(url: string): TranslationData | null {
+    const storage = this.getStorage();
+    if (!storage) return null;
+
+    const key = this.persistentCacheConfig.prefix + this.hashUrl(url);
+    try {
+      const cached = storage.getItem(key);
+      if (!cached) return null;
+
+      const entry = JSON.parse(cached) as {
+        url: string;
+        timestamp: number;
+        data: TranslationData;
+      };
+
+      // 检查是否过期
+      if (Date.now() - entry.timestamp > this.persistentCacheConfig.ttl) {
+        storage.removeItem(key);
+        return null;
+      }
+
+      // 验证 URL 匹配（防止 hash 碰撞）
+      if (entry.url !== url) {
+        return null;
+      }
+
+      return entry.data;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * 保存到持久化缓存
+   *
+   * @param url - 缓存键（URL）
+   * @param data - 翻译数据
+   */
+  private saveToPersistentCache(url: string, data: TranslationData): void {
+    const storage = this.getStorage();
+    if (!storage) return;
+
+    const key = this.persistentCacheConfig.prefix + this.hashUrl(url);
+    const entry = {
+      url,
+      timestamp: Date.now(),
+      data,
+    };
+
+    try {
+      storage.setItem(key, JSON.stringify(entry));
+      // 清理过期和超量的缓存
+      this.cleanupPersistentCache();
+    } catch {
+      // 存储满了，尝试清理后重试
+      this.cleanupPersistentCache();
+      try {
+        storage.setItem(key, JSON.stringify(entry));
+      } catch {
+        // 仍然失败，放弃持久化
+      }
+    }
+  }
+
+  /**
+   * 清理持久化缓存
+   * - 删除过期条目
+   * - 如果超过最大数量，删除最旧的
+   */
+  private cleanupPersistentCache(): void {
+    const storage = this.getStorage();
+    if (!storage) return;
+
+    const prefix = this.persistentCacheConfig.prefix;
+    const entries: Array<{ key: string; timestamp: number }> = [];
+
+    // 收集所有缓存条目
+    for (let i = 0; i < storage.length; i++) {
+      const key = storage.key(i);
+      if (!key || !key.startsWith(prefix)) continue;
+
+      try {
+        const cached = storage.getItem(key);
+        if (!cached) continue;
+
+        const entry = JSON.parse(cached) as { timestamp: number };
+        const now = Date.now();
+
+        // 删除过期条目
+        if (now - entry.timestamp > this.persistentCacheConfig.ttl) {
+          storage.removeItem(key);
+          continue;
+        }
+
+        entries.push({ key, timestamp: entry.timestamp });
+      } catch {
+        // 解析失败，删除无效条目
+        storage.removeItem(key);
+      }
+    }
+
+    // 如果超过最大数量，删除最旧的
+    if (entries.length > this.persistentCacheConfig.maxEntries) {
+      // 按时间戳升序排序（旧的在前）
+      entries.sort((a, b) => a.timestamp - b.timestamp);
+
+      const toDelete = entries.length - this.persistentCacheConfig.maxEntries;
+      for (let i = 0; i < toDelete; i++) {
+        storage.removeItem(entries[i].key);
+      }
+    }
+  }
+
+  /**
+   * 简单的 URL hash 函数
+   * 生成短小的缓存键，避免 localStorage key 过长
+   *
+   * @param url - URL 字符串
+   * @returns hash 字符串
+   */
+  private hashUrl(url: string): string {
+    let hash = 0;
+    for (let i = 0; i < url.length; i++) {
+      const char = url.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash; // Convert to 32bit integer
+    }
+    return Math.abs(hash).toString(36);
+  }
+
+  /**
+   * 清除持久化缓存
+   * 删除所有 i18n 相关的持久化缓存
+   */
+  clearPersistentCache(): void {
+    const storage = this.getStorage();
+    if (!storage) return;
+
+    const prefix = this.persistentCacheConfig.prefix;
+    const keysToRemove: string[] = [];
+
+    for (let i = 0; i < storage.length; i++) {
+      const key = storage.key(i);
+      if (key && key.startsWith(prefix)) {
+        keysToRemove.push(key);
+      }
+    }
+
+    for (const key of keysToRemove) {
+      storage.removeItem(key);
+    }
+
+    // 同时清除内存缓存
+    this.loadedUrls.clear();
   }
 
   /**
@@ -395,7 +736,10 @@ export class I18n implements I18nService {
         typeof targetValue === "object" &&
         targetValue !== null
       ) {
-        this.mergeDeep(targetValue as TranslationData, sourceValue as TranslationData);
+        this.mergeDeep(
+          targetValue as TranslationData,
+          sourceValue as TranslationData,
+        );
       } else {
         target[key] = sourceValue;
       }
@@ -614,6 +958,104 @@ export class I18n implements I18nService {
    */
   removeAllListeners(): void {
     this.callbacks.clear();
+  }
+
+  /**
+   * 检测浏览器/系统语言
+   *
+   * 按优先级检测：
+   * 1. 浏览器 navigator.language
+   * 2. 浏览器 navigator.languages
+   * 3. 服务端环境变量 LANG / LC_ALL
+   *
+   * @returns 检测到的语言代码，未检测到返回 null
+   *
+   * @example
+   * ```typescript
+   * const detected = i18n.detectLocale();
+   * if (detected && i18n.isLocaleSupported(detected)) {
+   *   i18n.setLocale(detected);
+   * }
+   * ```
+   */
+  detectLocale(): string | null {
+    // 浏览器环境
+    if (typeof globalThis.navigator !== "undefined") {
+      const nav = globalThis.navigator as Navigator & { languages?: string[] };
+
+      // 尝试精确匹配
+      if (nav.language && this.localesSet.has(nav.language)) {
+        return nav.language;
+      }
+
+      // 尝试从 languages 列表匹配
+      if (nav.languages) {
+        for (const lang of nav.languages) {
+          if (this.localesSet.has(lang)) {
+            return lang;
+          }
+          // 尝试匹配主语言代码（如 "zh" 匹配 "zh-CN"）
+          const primary = lang.split("-")[0];
+          for (const locale of this.localesArray) {
+            if (locale.startsWith(primary + "-") || locale === primary) {
+              return locale;
+            }
+          }
+        }
+      }
+
+      // 尝试匹配主语言代码
+      if (nav.language) {
+        const primary = nav.language.split("-")[0];
+        for (const locale of this.localesArray) {
+          if (locale.startsWith(primary + "-") || locale === primary) {
+            return locale;
+          }
+        }
+      }
+    }
+
+    // 服务端环境（Deno/Node）
+    if (typeof globalThis.Deno !== "undefined") {
+      const env = globalThis.Deno.env;
+      const langEnv = env.get?.("LC_ALL") || env.get?.("LANG") ||
+        env.get?.("LANGUAGE");
+      if (langEnv) {
+        // 解析环境变量（如 "zh_CN.UTF-8" -> "zh-CN"）
+        const match = langEnv.match(/^([a-z]{2})[-_]([A-Z]{2})/i);
+        if (match) {
+          const normalized = `${match[1].toLowerCase()}-${
+            match[2].toUpperCase()
+          }`;
+          if (this.localesSet.has(normalized)) {
+            return normalized;
+          }
+        }
+        // 尝试匹配主语言代码
+        const primary = langEnv.substring(0, 2).toLowerCase();
+        for (const locale of this.localesArray) {
+          if (locale.startsWith(primary + "-") || locale === primary) {
+            return locale;
+          }
+        }
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * 清除翻译缓存
+   *
+   * 手动清除所有缓存的翻译结果
+   *
+   * @example
+   * ```typescript
+   * i18n.clearCache();
+   * ```
+   */
+  clearCache(): void {
+    this.translationCache.clear();
   }
 
   /**

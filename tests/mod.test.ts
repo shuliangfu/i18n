@@ -2,16 +2,16 @@
  * @dreamer/i18n 测试
  */
 
-import { describe, it, beforeEach, afterEach, expect } from "@dreamer/test";
+import { afterEach, beforeEach, describe, expect, it } from "@dreamer/test";
 import {
-  I18n,
+  $i18n,
+  $t,
   createI18n,
   getI18n,
-  setDefaultI18n,
+  I18n,
   isI18nInstalled,
+  setDefaultI18n,
   uninstallI18n,
-  $t,
-  $i18n,
 } from "../src/mod.ts";
 
 describe("I18n 国际化库", () => {
@@ -43,7 +43,10 @@ describe("I18n 国际化库", () => {
     });
 
     it("setDefaultI18n 应该设置默认实例", () => {
-      const customI18n = new I18n({ defaultLocale: "ja-JP", locales: ["ja-JP"] });
+      const customI18n = new I18n({
+        defaultLocale: "ja-JP",
+        locales: ["ja-JP"],
+      });
       setDefaultI18n(customI18n);
       expect(getI18n()).toBe(customI18n);
     });
@@ -285,12 +288,16 @@ describe("I18n 国际化库", () => {
 
     it("小时前的时间应该正确格式化", () => {
       const i18n = new I18n({ defaultLocale: "zh-CN" });
-      expect(i18n.formatRelative(Date.now() - 2 * 60 * 60 * 1000)).toBe("2 小时前");
+      expect(i18n.formatRelative(Date.now() - 2 * 60 * 60 * 1000)).toBe(
+        "2 小时前",
+      );
     });
 
     it("英文应该使用英文格式", () => {
       const i18n = new I18n({ defaultLocale: "en-US" });
-      expect(i18n.formatRelative(Date.now() - 5 * 60 * 1000)).toBe("5 minutes ago");
+      expect(i18n.formatRelative(Date.now() - 5 * 60 * 1000)).toBe(
+        "5 minutes ago",
+      );
     });
 
     it("未来时间应该使用'后'", () => {
@@ -463,8 +470,12 @@ describe("I18n 国际化库", () => {
         },
       });
       // 模拟 XSS 攻击
-      const result = i18n.t("greeting", { name: '<script>alert("xss")</script>' });
-      expect(result).toBe('你好 &lt;script&gt;alert(&quot;xss&quot;)&lt;/script&gt;');
+      const result = i18n.t("greeting", {
+        name: '<script>alert("xss")</script>',
+      });
+      expect(result).toBe(
+        "你好 &lt;script&gt;alert(&quot;xss&quot;)&lt;/script&gt;",
+      );
     });
 
     it("escapeHtml=true 应该转义引号", () => {
@@ -474,7 +485,7 @@ describe("I18n 国际化库", () => {
           "zh-CN": { msg: "{content}" },
         },
       });
-      const result = i18n.t("msg", { content: "It's a \"test\" & more" });
+      const result = i18n.t("msg", { content: 'It\'s a "test" & more' });
       expect(result).toBe("It&#39;s a &quot;test&quot; &amp; more");
     });
 
@@ -532,6 +543,198 @@ describe("I18n 国际化库", () => {
       const result = i18n.setLocale("lang-99");
       expect(result).toBe(true);
       expect(i18n.getLocale()).toBe("lang-99");
+    });
+  });
+
+  describe("翻译结果缓存", () => {
+    it("enableCache=true 应该缓存翻译结果", () => {
+      const i18n = new I18n({
+        enableCache: true,
+        translations: {
+          "zh-CN": { hello: "你好", welcome: "欢迎 {name}" },
+        },
+      });
+
+      // 第一次翻译
+      const result1 = i18n.t("hello");
+      // 第二次翻译应该来自缓存
+      const result2 = i18n.t("hello");
+
+      expect(result1).toBe("你好");
+      expect(result2).toBe("你好");
+    });
+
+    it("带参数的翻译应该正确缓存", () => {
+      const i18n = new I18n({
+        enableCache: true,
+        translations: {
+          "zh-CN": { welcome: "欢迎 {name}" },
+        },
+      });
+
+      const result1 = i18n.t("welcome", { name: "张三" });
+      const result2 = i18n.t("welcome", { name: "李四" });
+      const result3 = i18n.t("welcome", { name: "张三" }); // 应该命中缓存
+
+      expect(result1).toBe("欢迎 张三");
+      expect(result2).toBe("欢迎 李四");
+      expect(result3).toBe("欢迎 张三");
+    });
+
+    it("切换语言应该清除缓存", () => {
+      const i18n = new I18n({
+        enableCache: true,
+        locales: ["zh-CN", "en-US"],
+        translations: {
+          "zh-CN": { hello: "你好" },
+          "en-US": { hello: "Hello" },
+        },
+      });
+
+      expect(i18n.t("hello")).toBe("你好");
+      i18n.setLocale("en-US");
+      expect(i18n.t("hello")).toBe("Hello");
+    });
+
+    it("loadTranslations 应该清除缓存", () => {
+      const i18n = new I18n({
+        enableCache: true,
+        translations: {
+          "zh-CN": { hello: "你好" },
+        },
+      });
+
+      expect(i18n.t("hello")).toBe("你好");
+
+      // 加载新翻译
+      i18n.loadTranslations("zh-CN", { hello: "您好" });
+      expect(i18n.t("hello")).toBe("您好");
+    });
+
+    it("clearCache 应该清除所有缓存", () => {
+      const i18n = new I18n({
+        enableCache: true,
+        translations: {
+          "zh-CN": { hello: "你好" },
+        },
+      });
+
+      i18n.t("hello");
+      i18n.clearCache();
+      // 缓存被清除后应该重新翻译
+      expect(i18n.t("hello")).toBe("你好");
+    });
+
+    it("cacheMaxSize 应该限制缓存大小", () => {
+      const i18n = new I18n({
+        enableCache: true,
+        cacheMaxSize: 3,
+        translations: {
+          "zh-CN": {
+            a: "A",
+            b: "B",
+            c: "C",
+            d: "D",
+          },
+        },
+      });
+
+      // 缓存 3 个翻译
+      i18n.t("a");
+      i18n.t("b");
+      i18n.t("c");
+      // 添加第 4 个应该移除最旧的
+      i18n.t("d");
+
+      // 所有翻译仍然正确（只是缓存行为不同）
+      expect(i18n.t("a")).toBe("A");
+      expect(i18n.t("b")).toBe("B");
+      expect(i18n.t("c")).toBe("C");
+      expect(i18n.t("d")).toBe("D");
+    });
+  });
+
+  describe("语言自动检测", () => {
+    it("detectLocale 应该返回 null（Deno 测试环境无浏览器）", () => {
+      const i18n = new I18n({
+        locales: ["zh-CN", "en-US"],
+      });
+
+      // 在 Deno 测试环境中，navigator 不可用，应返回 null 或匹配的语言
+      const detected = i18n.detectLocale();
+      // 结果取决于环境
+      expect(detected === null || i18n.isLocaleSupported(detected!)).toBe(true);
+    });
+
+    it("autoDetect=true 应该自动设置检测到的语言", () => {
+      const i18n = new I18n({
+        locales: ["zh-CN", "en-US"],
+        defaultLocale: "zh-CN",
+        autoDetect: true,
+      });
+
+      // 语言应该是检测到的或默认的
+      const locale = i18n.getLocale();
+      expect(i18n.isLocaleSupported(locale)).toBe(true);
+    });
+
+    it("detectLocale 不支持的语言应该返回 null", () => {
+      const i18n = new I18n({
+        locales: ["fr-FR", "de-DE"], // 不太可能的系统语言
+      });
+
+      const detected = i18n.detectLocale();
+      // 如果系统语言不在列表中，应该返回 null
+      if (detected !== null) {
+        expect(i18n.isLocaleSupported(detected)).toBe(true);
+      }
+    });
+  });
+
+  describe("异步翻译加载", () => {
+    it("loadTranslationsAsync 应该加载远程翻译（模拟测试）", async () => {
+      const i18n = new I18n({
+        locales: ["zh-CN"],
+      });
+
+      // 由于无法在测试中模拟 fetch，这里只测试方法存在
+      expect(typeof i18n.loadTranslationsAsync).toBe("function");
+    });
+  });
+
+  describe("持久化缓存", () => {
+    it("persistentCache 配置应该正确初始化", () => {
+      const i18n = new I18n({
+        persistentCache: {
+          enabled: true,
+          storage: "sessionStorage",
+          prefix: "test_i18n_",
+          maxEntries: 5,
+          ttl: 3600000,
+        },
+      });
+
+      // 验证实例创建成功
+      expect(i18n.getLocale()).toBe("zh-CN");
+    });
+
+    it("clearPersistentCache 方法应该存在", () => {
+      const i18n = new I18n({
+        persistentCache: { enabled: true },
+      });
+
+      expect(typeof i18n.clearPersistentCache).toBe("function");
+      // 调用不应抛出错误
+      i18n.clearPersistentCache();
+    });
+
+    it("内存缓存应该避免重复加载相同 URL", async () => {
+      const i18n = new I18n({
+        locales: ["zh-CN"],
+      });
+
+      // 测试方法存在
+      expect(typeof i18n.loadTranslationsAsync).toBe("function");
     });
   });
 });

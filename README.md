@@ -4,7 +4,7 @@
 
 [![JSR](https://jsr.io/badges/@dreamer/i18n)](https://jsr.io/@dreamer/i18n)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE.md)
-[![Tests](https://img.shields.io/badge/tests-58%20passed-brightgreen)](./TEST_REPORT.md)
+[![Tests](https://img.shields.io/badge/tests-71%20passed-brightgreen)](./TEST_REPORT.md)
 
 ---
 
@@ -58,7 +58,14 @@ bunx jsr add @dreamer/i18n
 ### 语言管理
 - **语言切换**：动态切换当前语言
 - **语言检测**：检查语言是否支持
+- **自动检测**：从浏览器/系统检测语言偏好
 - **事件监听**：监听语言变化事件
+- **异步加载**：从 URL 异步加载翻译数据
+
+### 性能优化
+- **翻译缓存**：缓存翻译结果，避免重复解析
+- **LRU 策略**：限制缓存大小，自动淘汰旧条目
+- **键路径缓存**：缓存嵌套键解析结果
 
 ### 全局访问
 - **全局 $t**：安装后可全局使用 `$t()` 翻译函数
@@ -247,6 +254,115 @@ i18n.setLocale("en-US"); // 输出: "语言已切换到: en-US"
 unsubscribe();
 ```
 
+### 语言自动检测
+
+```typescript
+import { createI18n } from "@dreamer/i18n";
+
+// 方式 1：手动检测
+const i18n = createI18n({
+  locales: ["zh-CN", "en-US", "ja-JP"]
+});
+
+const detected = i18n.detectLocale();
+if (detected) {
+  i18n.setLocale(detected);
+}
+
+// 方式 2：自动检测
+const i18n2 = createI18n({
+  locales: ["zh-CN", "en-US", "ja-JP"],
+  autoDetect: true, // 创建时自动检测并设置语言
+});
+```
+
+### 异步加载翻译
+
+```typescript
+import { createI18n } from "@dreamer/i18n";
+
+const i18n = createI18n({
+  locales: ["zh-CN", "en-US"]
+});
+
+// 从 URL 加载翻译
+await i18n.loadTranslationsAsync("zh-CN", "/locales/zh-CN.json");
+await i18n.loadTranslationsAsync("en-US", "https://cdn.example.com/i18n/en-US.json");
+```
+
+### 翻译缓存
+
+```typescript
+import { createI18n } from "@dreamer/i18n";
+
+const i18n = createI18n({
+  enableCache: true,     // 启用翻译结果缓存
+  cacheMaxSize: 500,     // 最多缓存 500 条（默认）
+  translations: {
+    "zh-CN": { greeting: "你好 {name}" }
+  }
+});
+
+// 第一次翻译，结果会被缓存
+i18n.t("greeting", { name: "张三" });
+
+// 后续相同参数的翻译直接从缓存返回
+i18n.t("greeting", { name: "张三" }); // 命中缓存
+
+// 手动清除缓存
+i18n.clearCache();
+```
+
+### 语言包持久化缓存
+
+当使用 `loadTranslationsAsync` 加载语言包时，可以启用持久化缓存，避免重复请求：
+
+```typescript
+import { createI18n } from "@dreamer/i18n";
+
+const i18n = createI18n({
+  locales: ["zh-CN", "en-US"],
+  persistentCache: {
+    enabled: true,           // 启用持久化缓存
+    storage: "localStorage", // 存储类型（默认 localStorage）
+    prefix: "i18n_cache_",   // 缓存键前缀
+    maxEntries: 10,          // 最多缓存 10 个语言包（LRU 淘汰）
+    ttl: 7 * 24 * 60 * 60 * 1000, // 7 天过期
+  },
+});
+
+// 第一次加载：从网络请求，并缓存到 localStorage
+await i18n.loadTranslationsAsync("zh-CN", "/locales/zh-CN.abc123.json");
+
+// 第二次加载相同 URL：直接从缓存读取，无网络请求
+await i18n.loadTranslationsAsync("zh-CN", "/locales/zh-CN.abc123.json");
+
+// 切换语言，加载新语言包
+await i18n.loadTranslationsAsync("en-US", "/locales/en-US.def456.json");
+
+// 再次切换回中文：直接从缓存读取
+await i18n.loadTranslationsAsync("zh-CN", "/locales/zh-CN.abc123.json");
+
+// 清除所有持久化缓存
+i18n.clearPersistentCache();
+```
+
+**缓存策略说明**：
+
+| 特性 | 说明 |
+|------|------|
+| 缓存键 | 完整 URL 作为唯一标识，支持查询参数（如 `?t=123456`） |
+| 双层缓存 | 内存 + 持久化，优先读内存，减少 JSON 解析开销 |
+| 自动失效 | URL 变化（hash/时间戳变化）= 新缓存键 = 自动使用新版本 |
+| TTL 过期 | 超过 `ttl` 时间的条目自动删除（默认 7 天） |
+| LRU 淘汰 | 超过 `maxEntries` 数量时，删除最久未访问的条目 |
+| 碰撞检测 | 缓存中存储完整 URL，防止 hash 碰撞 |
+
+**`maxEntries` 说明**：
+- 指最多缓存多少个**不同 URL** 的语言包文件（不是大小限制）
+- 例如：应用支持 5 种语言，建议设置为 `5-10`
+- LRU（Least Recently Used）策略：超量时删除最久未访问的
+
 ---
 
 ## 📚 API 文档
@@ -271,6 +387,10 @@ unsubscribe();
 | `removeAllListeners()` | 移除所有监听器 |
 | `install()` | 安装到全局 |
 | `uninstall()` | 从全局卸载 |
+| `detectLocale()` | 检测浏览器/系统语言 |
+| `loadTranslationsAsync(locale, url)` | 异步加载翻译数据 |
+| `clearCache()` | 清除翻译结果缓存 |
+| `clearPersistentCache()` | 清除持久化语言包缓存 |
 
 ### 配置选项
 
@@ -287,6 +407,14 @@ unsubscribe();
 | `numberFormat.decimalSeparator` | `string` | `"."` | 小数分隔符 |
 | `fallbackBehavior` | `"key" \| "empty" \| "default"` | `"key"` | 缺失翻译回退行为 |
 | `escapeHtml` | `boolean` | `false` | 是否转义 HTML 特殊字符（防止 XSS） |
+| `enableCache` | `boolean` | `false` | 是否启用翻译结果缓存 |
+| `cacheMaxSize` | `number` | `500` | 翻译缓存最大条数 |
+| `autoDetect` | `boolean` | `false` | 是否自动检测语言 |
+| `persistentCache.enabled` | `boolean` | `false` | 是否启用语言包持久化缓存 |
+| `persistentCache.storage` | `"localStorage" \| "sessionStorage"` | `"localStorage"` | 持久化存储类型 |
+| `persistentCache.prefix` | `string` | `"i18n_cache_"` | 缓存键前缀 |
+| `persistentCache.maxEntries` | `number` | `10` | 最大缓存条目数（语言包文件数量，非大小） |
+| `persistentCache.ttl` | `number` | `604800000` | 缓存过期时间（毫秒，默认 7 天） |
 
 ### 便捷导出
 
@@ -307,15 +435,15 @@ $i18n.formatNumber(1234.56);
 
 ## 📊 测试报告
 
-[![Tests](https://img.shields.io/badge/tests-58%20passed-brightgreen)](./TEST_REPORT.md)
+[![Tests](https://img.shields.io/badge/tests-71%20passed-brightgreen)](./TEST_REPORT.md)
 
 | 指标 | 值 |
 |------|-----|
-| 总测试数 | 58 |
-| 通过 | 58 |
+| 总测试数 | 71 |
+| 通过 | 71 |
 | 失败 | 0 |
 | 通过率 | 100% |
-| 测试时间 | 2026-01-30 |
+| 测试时间 | 2026-02-01 |
 
 详细测试报告请查看 [TEST_REPORT.md](./TEST_REPORT.md)
 

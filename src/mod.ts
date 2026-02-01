@@ -192,10 +192,16 @@ export const $i18n: I18nService = {
   loadTranslations: (locale: string, data: Record<string, unknown>): void => {
     const g = getGlobalRef();
     if (g.$i18n) {
-      g.$i18n.loadTranslations(locale, data as import("./types.ts").TranslationData);
+      g.$i18n.loadTranslations(
+        locale,
+        data as import("./types.ts").TranslationData,
+      );
       return;
     }
-    getI18n().loadTranslations(locale, data as import("./types.ts").TranslationData);
+    getI18n().loadTranslations(
+      locale,
+      data as import("./types.ts").TranslationData,
+    );
   },
 
   /**
@@ -223,7 +229,10 @@ export const $i18n: I18nService = {
   /**
    * 格式化数字
    */
-  formatNumber: (value: number, options?: Partial<import("./types.ts").NumberFormatOptions>): string => {
+  formatNumber: (
+    value: number,
+    options?: Partial<import("./types.ts").NumberFormatOptions>,
+  ): string => {
     const g = getGlobalRef();
     if (g.$i18n) {
       return g.$i18n.formatNumber(value, options);
@@ -245,7 +254,10 @@ export const $i18n: I18nService = {
   /**
    * 格式化日期
    */
-  formatDate: (date: Date | number, format?: "date" | "time" | "datetime" | string): string => {
+  formatDate: (
+    date: Date | number,
+    format?: "date" | "time" | "datetime" | string,
+  ): string => {
     const g = getGlobalRef();
     if (g.$i18n) {
       return g.$i18n.formatDate(date, format);
@@ -267,7 +279,9 @@ export const $i18n: I18nService = {
   /**
    * 监听语言变化
    */
-  onChange: (callback: import("./types.ts").LocaleChangeCallback): (() => void) => {
+  onChange: (
+    callback: import("./types.ts").LocaleChangeCallback,
+  ): () => void => {
     const g = getGlobalRef();
     if (g.$i18n) {
       return g.$i18n.onChange(callback);
@@ -285,6 +299,53 @@ export const $i18n: I18nService = {
       return;
     }
     getI18n().removeAllListeners();
+  },
+
+  /**
+   * 异步加载翻译数据
+   */
+  loadTranslationsAsync: async (locale: string, url: string): Promise<void> => {
+    const g = getGlobalRef();
+    if (g.$i18n) {
+      await g.$i18n.loadTranslationsAsync(locale, url);
+      return;
+    }
+    await getI18n().loadTranslationsAsync(locale, url);
+  },
+
+  /**
+   * 检测浏览器/系统语言
+   */
+  detectLocale: (): string | null => {
+    const g = getGlobalRef();
+    if (g.$i18n) {
+      return g.$i18n.detectLocale();
+    }
+    return getI18n().detectLocale();
+  },
+
+  /**
+   * 清除翻译缓存
+   */
+  clearCache: (): void => {
+    const g = getGlobalRef();
+    if (g.$i18n) {
+      g.$i18n.clearCache();
+      return;
+    }
+    getI18n().clearCache();
+  },
+
+  /**
+   * 清除持久化缓存
+   */
+  clearPersistentCache: (): void => {
+    const g = getGlobalRef();
+    if (g.$i18n) {
+      g.$i18n.clearPersistentCache();
+      return;
+    }
+    getI18n().clearPersistentCache();
   },
 };
 

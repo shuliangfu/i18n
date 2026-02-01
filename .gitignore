@@ -29,6 +29,10 @@ Thumbs.db
 
 # 测试数据
 tests/data/
+tests/output/
 tests/**/data/
 .snapshots/
 .npmrc
+
+# 测试覆盖率
+coverage/

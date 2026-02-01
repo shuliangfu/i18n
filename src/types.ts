@@ -81,6 +81,50 @@ export interface I18nOptions {
   fallbackBehavior?: "key" | "empty" | "default";
   /** 是否启用 HTML 转义（安全防护，防止 XSS 攻击，默认：false） */
   escapeHtml?: boolean;
+  /** 是否启用翻译结果缓存（默认：false） */
+  enableCache?: boolean;
+  /** 翻译缓存最大条数（默认：500） */
+  cacheMaxSize?: number;
+  /** 是否自动检测语言（默认：false） */
+  autoDetect?: boolean;
+  /**
+   * 语言包持久化缓存配置
+   *
+   * 用于缓存通过 loadTranslationsAsync 加载的语言包，避免重复网络请求。
+   * 支持带查询参数的 URL（如 `/locales/zh-CN.json?t=1234567890`）作为缓存键。
+   *
+   * 缓存失效机制：
+   * - URL 变化（hash/时间戳变化）= 新缓存键 = 自动使用新版本
+   * - 超过 TTL 过期时间 = 自动删除
+   * - 超过 maxEntries 数量 = LRU 淘汰最旧的
+   */
+  persistentCache?: {
+    /** 是否启用持久化缓存（默认：false） */
+    enabled: boolean;
+    /** 存储类型（默认：localStorage） */
+    storage?: "localStorage" | "sessionStorage";
+    /** 缓存键前缀（默认："i18n_cache_"） */
+    prefix?: string;
+    /**
+     * 最大缓存条目数（默认：10）
+     *
+     * 指最多缓存多少个不同 URL 的语言包文件（不是大小限制）。
+     * 超出时采用 LRU（Least Recently Used，最近最少使用）策略，
+     * 自动删除最久未访问的缓存条目。
+     *
+     * @example
+     * // 如果应用支持 5 种语言，建议设置为 5-10
+     * maxEntries: 5
+     */
+    maxEntries?: number;
+    /**
+     * 缓存过期时间（毫秒，默认：7天 = 604800000）
+     *
+     * 超过此时间的缓存条目会在下次访问时自动删除。
+     * 设置为 0 表示永不过期（仅受 maxEntries 限制）。
+     */
+    ttl?: number;
+  };
 }
 
 /**
@@ -100,22 +144,36 @@ export interface I18nService {
   isLocaleSupported: (locale: string) => boolean;
   /** 加载翻译数据 */
   loadTranslations: (locale: string, data: TranslationData) => void;
+  /** 异步加载翻译数据 */
+  loadTranslationsAsync: (locale: string, url: string) => Promise<void>;
   /** 获取所有翻译数据 */
   getTranslations: (locale?: string) => TranslationData;
   /** 检查翻译键是否存在 */
   has: (key: string) => boolean;
   /** 格式化数字 */
-  formatNumber: (value: number, options?: Partial<NumberFormatOptions>) => string;
+  formatNumber: (
+    value: number,
+    options?: Partial<NumberFormatOptions>,
+  ) => string;
   /** 格式化货币 */
   formatCurrency: (value: number, currency?: string) => string;
   /** 格式化日期 */
-  formatDate: (date: Date | number, format?: "date" | "time" | "datetime" | string) => string;
+  formatDate: (
+    date: Date | number,
+    format?: "date" | "time" | "datetime" | string,
+  ) => string;
   /** 格式化相对时间 */
   formatRelative: (date: Date | number) => string;
   /** 监听语言变化 */
   onChange: (callback: LocaleChangeCallback) => () => void;
   /** 移除所有监听器 */
   removeAllListeners: () => void;
+  /** 检测浏览器/系统语言 */
+  detectLocale: () => string | null;
+  /** 清除翻译缓存 */
+  clearCache: () => void;
+  /** 清除持久化缓存（localStorage/sessionStorage） */
+  clearPersistentCache: () => void;
 }
 
 /**
