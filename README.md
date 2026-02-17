@@ -436,7 +436,7 @@ See [TEST_REPORT.md](./docs/en-US/TEST_REPORT.md) for details.
 
 ## 📜 Changelog
 
-**[1.1.0]** - 2026-02-17
+**[1.0.1]** - 2026-02-17
 
 - **Added**: `TranslationParams` now accepts `boolean` (interpolation as
   `"true"`/`"false"`).
