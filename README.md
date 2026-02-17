@@ -1,18 +1,20 @@
 # @dreamer/i18n
 
-> Lightweight internationalization (i18n) library with translation, formatting, and multi-language support.
+> Lightweight internationalization (i18n) library with translation, formatting,
+> and multi-language support.
 
-English | [中文 (Chinese)](./README-zh.md)
+English | [中文 (Chinese)](./docs/zh-CN/README.md)
 
 [![JSR](https://jsr.io/badges/@dreamer/i18n)](https://jsr.io/@dreamer/i18n)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE.md)
-[![Tests](https://img.shields.io/badge/tests-71%20passed-brightgreen)](./TEST_REPORT.md)
+[![License: Apache-2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](./LICENSE)
+[![Tests](https://img.shields.io/badge/tests-71%20passed-brightgreen)](./docs/en-US/TEST_REPORT.md)
 
 ---
 
 ## 🎯 Features
 
-Lightweight i18n library with full multi-language support. No external dependencies, pure JavaScript, works in browser and server.
+Lightweight i18n library with full multi-language support. No external
+dependencies, pure JavaScript, works in browser and server.
 
 ---
 
@@ -34,12 +36,12 @@ bunx jsr add @dreamer/i18n
 
 ## 🌍 Compatibility
 
-| Environment | Version | Status |
-| ----------- | ------- | ------ |
-| **Deno** | 2.0+ | ✅ Fully supported |
-| **Bun** | 1.0+ | ✅ Fully supported |
+| Environment | Version | Status             |
+| ----------- | ------- | ------------------ |
+| **Deno**    | 2.0+    | ✅ Fully supported |
+| **Bun**     | 1.0+    | ✅ Fully supported |
 | **Browser** | ES2020+ | ✅ Fully supported |
-| **Node.js** | 18+ | ✅ Fully supported |
+| **Node.js** | 18+     | ✅ Fully supported |
 
 ---
 
@@ -75,7 +77,7 @@ bunx jsr add @dreamer/i18n
 
 ### Global Access
 
-- **Global $t**: Use `$t()` after `install()`
+- **Global $t**: Use `$t()`after`install()`
 - **Global $i18n**: Access i18n service globally
 - **Exports**: Import `$t` and `$i18n` directly
 
@@ -103,14 +105,14 @@ const i18n = createI18n({
     "zh-CN": {
       greeting: "你好",
       welcome: "欢迎 {name}",
-      nav: { home: "首页", about: "关于" }
+      nav: { home: "首页", about: "关于" },
     },
     "en-US": {
       greeting: "Hello",
       welcome: "Welcome {name}",
-      nav: { home: "Home", about: "About" }
-    }
-  }
+      nav: { home: "Home", about: "About" },
+    },
+  },
 });
 
 console.log(i18n.t("greeting")); // "Hello"
@@ -128,13 +130,13 @@ console.log(i18n.t("greeting")); // Output in Chinese when zh-CN
 ### Global Access
 
 ```typescript
-import { createI18n, $t, $i18n } from "jsr:@dreamer/i18n";
+import { $i18n, $t, createI18n } from "jsr:@dreamer/i18n";
 
 const i18n = createI18n({
   defaultLocale: "en-US",
   translations: {
-    "en-US": { hello: "Hello" }
-  }
+    "en-US": { hello: "Hello" },
+  },
 });
 
 i18n.install();
@@ -165,7 +167,7 @@ declare global {
 **Option 2: Use exported helpers (recommended)**
 
 ```typescript
-import { $t, $i18n } from "jsr:@dreamer/i18n";
+import { $i18n, $t } from "jsr:@dreamer/i18n";
 
 $t("hello");
 $i18n.setLocale("en-US");
@@ -224,8 +226,8 @@ const i18n = createI18n();
 i18n.loadTranslations("zh-CN", {
   errors: {
     required: "This field is required",
-    email: "Please enter a valid email"
-  }
+    email: "Please enter a valid email",
+  },
 });
 
 console.log(i18n.t("errors.required")); // "This field is required"
@@ -237,7 +239,7 @@ console.log(i18n.t("errors.required")); // "This field is required"
 import { createI18n } from "jsr:@dreamer/i18n";
 
 const i18n = createI18n({
-  locales: ["zh-CN", "en-US"]
+  locales: ["zh-CN", "en-US"],
 });
 
 const unsubscribe = i18n.onChange((locale) => {
@@ -256,7 +258,7 @@ import { createI18n } from "jsr:@dreamer/i18n";
 
 // Option 1: Manual
 const i18n = createI18n({
-  locales: ["zh-CN", "en-US", "ja-JP"]
+  locales: ["zh-CN", "en-US", "ja-JP"],
 });
 
 const detected = i18n.detectLocale();
@@ -277,11 +279,14 @@ const i18n2 = createI18n({
 import { createI18n } from "jsr:@dreamer/i18n";
 
 const i18n = createI18n({
-  locales: ["zh-CN", "en-US"]
+  locales: ["zh-CN", "en-US"],
 });
 
 await i18n.loadTranslationsAsync("zh-CN", "/locales/zh-CN.json");
-await i18n.loadTranslationsAsync("en-US", "https://cdn.example.com/i18n/en-US.json");
+await i18n.loadTranslationsAsync(
+  "en-US",
+  "https://cdn.example.com/i18n/en-US.json",
+);
 ```
 
 ### Translation Cache
@@ -293,8 +298,8 @@ const i18n = createI18n({
   enableCache: true,
   cacheMaxSize: 500,
   translations: {
-    "zh-CN": { greeting: "你好 {name}" }
-  }
+    "zh-CN": { greeting: "你好 {name}" },
+  },
 });
 
 i18n.t("greeting", { name: "Alice" });
@@ -305,7 +310,8 @@ i18n.clearCache();
 
 ### Persistent Translation Bundle Cache
 
-When using `loadTranslationsAsync`, enable persistent cache to avoid repeated requests:
+When using `loadTranslationsAsync`, enable persistent cache to avoid repeated
+requests:
 
 ```typescript
 import { createI18n } from "jsr:@dreamer/i18n";
@@ -332,16 +338,17 @@ i18n.clearPersistentCache();
 
 **Cache behavior**:
 
-| Feature | Description |
-| ------- | ----------- |
-| Cache key | Full URL as unique id, supports query params (e.g. `?t=123456`) |
-| Two-tier | Memory + persistent, prefer memory to reduce JSON parsing |
-| Invalidation | URL change (hash/timestamp) = new key = new version |
-| TTL | Entries older than `ttl` are removed (default 7 days) |
-| LRU | When over `maxEntries`, evict least recently used |
-| Collision | Full URL stored to prevent hash collision |
+| Feature      | Description                                                     |
+| ------------ | --------------------------------------------------------------- |
+| Cache key    | Full URL as unique id, supports query params (e.g. `?t=123456`) |
+| Two-tier     | Memory + persistent, prefer memory to reduce JSON parsing       |
+| Invalidation | URL change (hash/timestamp) = new key = new version             |
+| TTL          | Entries older than `ttl` are removed (default 7 days)           |
+| LRU          | When over `maxEntries`, evict least recently used               |
+| Collision    | Full URL stored to prevent hash collision                       |
 
-**`maxEntries`**: Max number of different translation bundle URLs to cache (not size). For 5 locales, use 5–10. LRU evicts least recently used.
+**`maxEntries`**: Max number of different translation bundle URLs to cache (not
+size). For 5 locales, use 5–10. LRU evicts least recently used.
 
 ---
 
@@ -349,57 +356,57 @@ i18n.clearPersistentCache();
 
 ### I18n Methods
 
-| Method | Description |
-| ------ | ----------- |
-| `t(key, params?)` | Translate |
-| `getLocale()` | Get current locale |
-| `setLocale(locale)` | Set locale |
-| `getLocales()` | Get supported locales |
-| `isLocaleSupported(locale)` | Check if locale is supported |
-| `loadTranslations(locale, data)` | Load translations |
-| `getTranslations(locale?)` | Get translations |
-| `has(key)` | Check if key exists |
-| `formatNumber(value, options?)` | Format number |
-| `formatCurrency(value, currency?)` | Format currency |
-| `formatDate(date, format?)` | Format date |
-| `formatRelative(date)` | Format relative time |
-| `onChange(callback)` | Listen for locale changes |
-| `removeAllListeners()` | Remove all listeners |
-| `install()` | Install globally |
-| `uninstall()` | Uninstall globally |
-| `detectLocale()` | Detect browser/system locale |
-| `loadTranslationsAsync(locale, url)` | Load translations from URL |
-| `clearCache()` | Clear translation cache |
-| `clearPersistentCache()` | Clear persistent bundle cache |
+| Method                               | Description                   |
+| ------------------------------------ | ----------------------------- |
+| `t(key, params?)`                    | Translate                     |
+| `getLocale()`                        | Get current locale            |
+| `setLocale(locale)`                  | Set locale                    |
+| `getLocales()`                       | Get supported locales         |
+| `isLocaleSupported(locale)`          | Check if locale is supported  |
+| `loadTranslations(locale, data)`     | Load translations             |
+| `getTranslations(locale?)`           | Get translations              |
+| `has(key)`                           | Check if key exists           |
+| `formatNumber(value, options?)`      | Format number                 |
+| `formatCurrency(value, currency?)`   | Format currency               |
+| `formatDate(date, format?)`          | Format date                   |
+| `formatRelative(date)`               | Format relative time          |
+| `onChange(callback)`                 | Listen for locale changes     |
+| `removeAllListeners()`               | Remove all listeners          |
+| `install()`                          | Install globally              |
+| `uninstall()`                        | Uninstall globally            |
+| `detectLocale()`                     | Detect browser/system locale  |
+| `loadTranslationsAsync(locale, url)` | Load translations from URL    |
+| `clearCache()`                       | Clear translation cache       |
+| `clearPersistentCache()`             | Clear persistent bundle cache |
 
 ### Config Options
 
-| Option | Type | Default | Description |
-| ------ | ---- | ------- | ----------- |
-| `defaultLocale` | `string` | `"zh-CN"` | Default locale |
-| `locales` | `string[]` | `["zh-CN", "en-US"]` | Supported locales |
-| `translations` | `Record<string, TranslationData>` | `{}` | Initial translations |
-| `dateFormat.date` | `string` | `"YYYY-MM-DD"` | Date format |
-| `dateFormat.time` | `string` | `"HH:mm:ss"` | Time format |
-| `dateFormat.datetime` | `string` | `"YYYY-MM-DD HH:mm:ss"` | Datetime format |
-| `numberFormat.decimals` | `number` | `2` | Decimal places |
-| `numberFormat.thousandsSeparator` | `string` | `","` | Thousands separator |
-| `numberFormat.decimalSeparator` | `string` | `"."` | Decimal separator |
-| `fallbackBehavior` | `"key" \| "empty" \| "default"` | `"key"` | Fallback when key missing |
-| `escapeHtml` | `boolean` | `false` | Escape HTML (XSS) |
-| `enableCache` | `boolean` | `false` | Enable translation cache |
-| `cacheMaxSize` | `number` | `500` | Max cache entries |
-| `autoDetect` | `boolean` | `false` | Auto-detect locale |
-| `persistentCache.enabled` | `boolean` | `false` | Enable persistent bundle cache |
-| `persistentCache.storage` | `"localStorage" \| "sessionStorage"` | `"localStorage"` | Storage type |
-| `persistentCache.prefix` | `string` | `"i18n_cache_"` | Cache key prefix |
-| `persistentCache.maxEntries` | `number` | `10` | Max bundle URLs (not size) |
-| `persistentCache.ttl` | `number` | `604800000` | TTL in ms (default 7 days) |
+| Option                            | Type                                 | Default                 | Description                    |
+| --------------------------------- | ------------------------------------ | ----------------------- | ------------------------------ |
+| `defaultLocale`                   | `string`                             | `"zh-CN"`               | Default locale                 |
+| `locales`                         | `string[]`                           | `["zh-CN", "en-US"]`    | Supported locales              |
+| `translations`                    | `Record<string, TranslationData>`    | `{}`                    | Initial translations           |
+| `dateFormat.date`                 | `string`                             | `"YYYY-MM-DD"`          | Date format                    |
+| `dateFormat.time`                 | `string`                             | `"HH:mm:ss"`            | Time format                    |
+| `dateFormat.datetime`             | `string`                             | `"YYYY-MM-DD HH:mm:ss"` | Datetime format                |
+| `numberFormat.decimals`           | `number`                             | `2`                     | Decimal places                 |
+| `numberFormat.thousandsSeparator` | `string`                             | `","`                   | Thousands separator            |
+| `numberFormat.decimalSeparator`   | `string`                             | `"."`                   | Decimal separator              |
+| `fallbackBehavior`                | `"key" \| "empty" \| "default"`      | `"key"`                 | Fallback when key missing      |
+| `escapeHtml`                      | `boolean`                            | `false`                 | Escape HTML (XSS)              |
+| `enableCache`                     | `boolean`                            | `false`                 | Enable translation cache       |
+| `cacheMaxSize`                    | `number`                             | `500`                   | Max cache entries              |
+| `autoDetect`                      | `boolean`                            | `false`                 | Auto-detect locale             |
+| `persistentCache.enabled`         | `boolean`                            | `false`                 | Enable persistent bundle cache |
+| `persistentCache.storage`         | `"localStorage" \| "sessionStorage"` | `"localStorage"`        | Storage type                   |
+| `persistentCache.prefix`          | `string`                             | `"i18n_cache_"`         | Cache key prefix               |
+| `persistentCache.maxEntries`      | `number`                             | `10`                    | Max bundle URLs (not size)     |
+| `persistentCache.ttl`             | `number`                             | `604800000`             | TTL in ms (default 7 days)     |
 
 ### Exports
 
 ```typescript
-import { $t, $i18n, createI18n } from "jsr:@dreamer/i18n";
+import { $i18n, $t, createI18n } from "jsr:@dreamer/i18n";
 
 $t("greeting");
 $t("welcome", { name: "Alice" });
@@ -413,17 +420,30 @@ $i18n.formatNumber(1234.56);
 
 ## 📊 Test Report
 
-[![Tests](https://img.shields.io/badge/tests-71%20passed-brightgreen)](./TEST_REPORT.md)
+[![Tests](https://img.shields.io/badge/tests-71%20passed-brightgreen)](./docs/en-US/TEST_REPORT.md)
 
-| Metric | Value |
-| ------ | ----- |
-| Total | 71 |
-| Passed | 71 |
-| Failed | 0 |
-| Pass Rate | 100% |
-| Date | 2026-02-01 |
+| Metric    | Value      |
+| --------- | ---------- |
+| Total     | 71         |
+| Passed    | 71         |
+| Failed    | 0          |
+| Pass Rate | 100%       |
+| Date      | 2026-02-01 |
 
-See [TEST_REPORT.md](./TEST_REPORT.md) for details.
+See [TEST_REPORT.md](./docs/en-US/TEST_REPORT.md) for details.
+
+---
+
+## 📜 Changelog
+
+**[1.1.0]** - 2026-02-17
+
+- **Added**: `TranslationParams` now accepts `boolean` (interpolation as
+  `"true"`/`"false"`).
+- **Changed**: License updated to Apache 2.0. Docs reorganized into `docs/en-US`
+  and `docs/zh-CN`.
+
+Full history: [CHANGELOG](./docs/en-US/CHANGELOG.md).
 
 ---
 
@@ -444,7 +464,8 @@ See [TEST_REPORT.md](./TEST_REPORT.md) for details.
 
 6. **XSS**: Use `escapeHtml: true` to escape HTML in params.
 
-7. **Prototype pollution**: `loadTranslations` filters dangerous keys (`__proto__`, `constructor`, `prototype`).
+7. **Prototype pollution**: `loadTranslations` filters dangerous keys
+   (`__proto__`, `constructor`, `prototype`).
 
 ---
 
@@ -456,7 +477,7 @@ Issues and Pull Requests welcome!
 
 ## 📄 License
 
-MIT License - see [LICENSE.md](./LICENSE.md)
+Apache License 2.0 - see [LICENSE](./LICENSE)
 
 ---
 

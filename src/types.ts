@@ -6,14 +6,17 @@
 
 /**
  * 翻译参数类型
- * 用于翻译字符串中的占位符替换
+ * 用于翻译字符串中的占位符替换，插值时 boolean 会转为 "true"/"false"
  *
  * @example
  * ```typescript
  * const params: TranslationParams = { name: "张三", count: 5 };
  * ```
  */
-export type TranslationParams = Record<string, string | number>;
+export type TranslationParams = Record<
+  string,
+  string | number | boolean
+>;
 
 /**
  * 翻译数据结构
