@@ -7,11 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.1.0] - 2026-02-17
+
+### Added
+
+- **TranslationParams**: Type now accepts `boolean`; interpolation converts
+  values to `"true"` / `"false"` for placeholder replacement.
+
+### Changed
+
+- **License**: Updated to Apache 2.0.
+
+### Documentation
+
+- Docs reorganized into `docs/en-US` and `docs/zh-CN` (README, CHANGELOG,
+  TEST_REPORT by language). Root keeps English README only.
+
+---
+
 ## [1.0.0] - 2026-02-06
 
 ### Added
 
-First stable release. Lightweight internationalization (i18n) library compatible with Deno, Bun, Node.js, and browsers. Pure JavaScript, no external dependencies.
+First stable release. Lightweight internationalization (i18n) library compatible
+with Deno, Bun, Node.js, and browsers. Pure JavaScript, no external
+dependencies.
 
 #### Translation
 
@@ -19,20 +39,25 @@ First stable release. Lightweight internationalization (i18n) library compatible
 - **Nested keys**: Dot-separated keys (e.g. `nav.home`)
 - **Interpolation**: `{name}` placeholder replacement
 - **Fallback**: Fall back to default locale when key is missing
-- **Fallback behavior**: Configurable via `fallbackBehavior` (`key`, `empty`, `default`)
+- **Fallback behavior**: Configurable via `fallbackBehavior` (`key`, `empty`,
+  `default`)
 
 #### Formatting
 
-- **Number formatting**: `formatNumber()` with thousands separator, decimal places
-- **Currency formatting**: `formatCurrency()` with auto symbol by locale or custom symbol
-- **Date formatting**: `formatDate()` for date, time, datetime, and custom formats
+- **Number formatting**: `formatNumber()` with thousands separator, decimal
+  places
+- **Currency formatting**: `formatCurrency()` with auto symbol by locale or
+  custom symbol
+- **Date formatting**: `formatDate()` for date, time, datetime, and custom
+  formats
 - **Relative time**: `formatRelative()` for "just now", "5 minutes ago", etc.
 
 #### Language Management
 
 - **Locale switch**: `setLocale()`, `getLocale()`, `getLocales()`
 - **Support check**: `isLocaleSupported()`
-- **Auto-detect**: `detectLocale()` from browser/system preferences, `autoDetect` option
+- **Auto-detect**: `detectLocale()` from browser/system preferences,
+  `autoDetect` option
 - **Dynamic loading**: `loadTranslations()` for merging translation data
 - **Async loading**: `loadTranslationsAsync()` for loading from URL
 
@@ -55,7 +80,8 @@ First stable release. Lightweight internationalization (i18n) library compatible
 
 #### Persistent Cache
 
-- **Bundle cache**: `persistentCache` config for caching loaded translation bundles
+- **Bundle cache**: `persistentCache` config for caching loaded translation
+  bundles
 - **Storage**: `localStorage` or `sessionStorage`
 - **TTL**: Configurable expiration (default 7 days)
 - **LRU eviction**: `maxEntries` for bundle URL count
@@ -64,7 +90,8 @@ First stable release. Lightweight internationalization (i18n) library compatible
 #### Security
 
 - **XSS protection**: `escapeHtml` option to escape HTML in params
-- **Prototype pollution**: `loadTranslations` filters dangerous keys (`__proto__`, `constructor`, `prototype`)
+- **Prototype pollution**: `loadTranslations` filters dangerous keys
+  (`__proto__`, `constructor`, `prototype`)
 
 #### Factory & Singleton
 
