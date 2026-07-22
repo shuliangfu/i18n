@@ -7,6 +7,23 @@
 
 ---
 
+## [1.1.1] - 2026-07-22
+
+### 变更
+
+- **`@dreamer/test`**：`^1.2.1` → `^1.2.3`（deno.json 与 package.json
+  同步），接入 test 1.2.3 的 `--test-force-exit` 修复与 runtime-adapter 1.2.2
+  集成。
+- **CI：Deno `v2.5` → `v2.9`**（3 处）：对齐本地开发环境与其他 @dreamer 包。
+
+### 修复
+
+- **`test:node` Linux CI 退出码 1**：为 `test:node` 脚本添加
+  `--test-force-exit`，测试完成后强制干净退出（与 @dreamer/test、runtime-adapter
+  一致）。
+
+---
+
 ## [1.1.0] - 2026-07-22
 
 ### 新增

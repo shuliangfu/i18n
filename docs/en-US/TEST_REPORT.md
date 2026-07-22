@@ -4,8 +4,8 @@
 
 | Item             | Value                          |
 | ---------------- | ------------------------------ |
-| Library Version  | 1.1.0                          |
-| Test Framework   | @dreamer/test@1.2.0            |
+| Library Version  | 1.1.1                          |
+| Test Framework   | @dreamer/test@1.2.3            |
 | Test Date        | 2026-07-22                     |
 | Test Environment | Deno 2.x / Bun 1.x / Node 22.x |
 

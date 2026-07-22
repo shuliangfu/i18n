@@ -1,6 +1,6 @@
 {
   "name": "@dreamer/i18n",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "license": "Apache-2.0",
   "exports": {
     ".": "./src/mod.ts"
@@ -33,7 +33,7 @@
     }
   },
   "imports": {
-    "@dreamer/test": "jsr:@dreamer/test@^1.2.1"
+    "@dreamer/test": "jsr:@dreamer/test@^1.2.3"
   },
   "minimumDependencyAge": 0,
   "nodeModulesDir": "auto"

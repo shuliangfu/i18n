@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.1.1] - 2026-07-22
+
+### Changed
+
+- **`@dreamer/test`**: bumped `^1.2.1` → `^1.2.3` (deno.json + package.json) to
+  pick up test 1.2.3's `--test-force-exit` fix and runtime-adapter 1.2.2
+  integration.
+- **CI: Deno `v2.5` → `v2.9`** (3 occurrences): aligns with the local dev
+  environment and other @dreamer packages.
+
+### Fixed
+
+- **`test:node` Linux CI exit code 1**: added `--test-force-exit` to the
+  `test:node` script to force clean exit after tests (matching @dreamer/test and
+  runtime-adapter patterns).
+
+---
+
 ## [1.1.0] - 2026-07-22
 
 ### Added
