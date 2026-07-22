@@ -1,0 +1,38 @@
+{
+  "name": "@dreamer/i18n",
+  "version": "1.1.0",
+  "description": "Lightweight internationalization (i18n) library compatible with Deno, Bun, Node.js, and browsers. Pure JavaScript, no external dependencies.",
+  "license": "Apache-2.0",
+  "private": true,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/shuliangfu/i18n.git"
+  },
+  "exports": {
+    ".": "./src/mod.ts"
+  },
+  "scripts": {
+    "test": "bun test tests/",
+    "test:node": "tsx --tsconfig tsconfig.json --test tests/*.test.ts"
+  },
+  "devDependencies": {
+    "@dreamer/test": "npm:@jsr/dreamer__test@^1.2.0",
+    "tsx": "^4.19.2"
+  },
+  "engines": {
+    "node": ">=22",
+    "bun": ">=1.3"
+  },
+  "keywords": [
+    "i18n",
+    "internationalization",
+    "l10n",
+    "localization",
+    "translation",
+    "locale",
+    "deno",
+    "bun",
+    "node",
+    "browser"
+  ]
+}

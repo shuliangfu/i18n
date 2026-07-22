@@ -7,6 +7,64 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.1.0] - 2026-07-22
+
+### Added
+
+- **Node.js compatibility**: First-class Node.js (>=22) support alongside Deno,
+  Bun, and browsers.
+  - `package.json` with `test:node` script (`tsx --test`) and
+    `engines.node>=22`.
+  - `tsconfig.json` for the tsx TypeScript loader.
+  - `.npmrc` pointing the `@jsr` scope to JSR's npm-compatible registry so
+    `npm`/`bun` can resolve `@dreamer/test`.
+  - Three-runtime CI workflow (Deno / Bun / Node × Linux / macOS / Windows).
+
+### Changed
+
+- **detectLocale()**: Server-side locale detection now reads `process.env`
+  (`LC_ALL` / `LANG` / `LANGUAGE`) on Node and Bun, in addition to the existing
+  `Deno.env` path. i18n cannot depend on `runtime-adapter` (runtime-adapter
+  depends on i18n), so env access is direct per runtime global — no new runtime
+  dependency.
+- **Dependencies**: `@dreamer/test` bumped `^1.0.10` → `^1.2.0` (Node-compatible
+  test runner).
+
+### Performance
+
+- **t()**: Cache key computed once instead of twice — `getCacheKey()` (which
+  runs `JSON.stringify` on params) no longer runs twice on the hot path.
+  Translation lookup extracted into `resolveTranslation()`, removing the
+  duplicated lookup/interpolate/cache-write blocks.
+- **formatNumber()**: Thousands-separator regex hoisted to a precompiled module
+  constant (`THOUSANDS_REGEX`) instead of being recompiled on every call.
+- **interpolate()**: Removed dead `INTERPOLATION_REGEX.lastIndex = 0`;
+  `String.replace` ignores `lastIndex` for global regexes.
+
+### Security
+
+- **loadTranslationsAsync()**: Response body is now validated at runtime to be a
+  non-null object (rejects arrays/strings/null/numbers) before entering the
+  translation pipeline, preventing crashes in `getNestedValue`/`mergeDeep` from
+  malformed JSON.
+- **getStorage()**: Now checks the actually-configured storage (`localStorage`
+  vs `sessionStorage`) and guards against access throws in privacy modes,
+  instead of only checking `localStorage` existence.
+
+### Refactor
+
+- **$i18n proxy**: The 200+ line hand-written delegation boilerplate in `mod.ts`
+  is replaced by a single `Proxy` that resolves the target instance
+  (`globalThis.$i18n ?? getI18n()`) and binds methods. Behavior-equivalent, far
+  less duplication.
+
+### Documentation
+
+- CHANGELOG / TEST_REPORT (en/zh) refreshed with three-runtime (Deno/Bun/Node)
+  results.
+
+---
+
 ## [1.0.1] - 2026-02-17
 
 ### Added

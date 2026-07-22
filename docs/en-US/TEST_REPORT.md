@@ -2,12 +2,12 @@
 
 ## Test Overview
 
-| Item             | Value                       |
-| ---------------- | --------------------------- |
-| Library Version  | 1.0.0-beta.3                |
-| Test Framework   | @dreamer/test@1.0.0-beta.40 |
-| Test Date        | 2026-02-01                  |
-| Test Environment | Deno 2.x / Bun 1.x          |
+| Item             | Value                          |
+| ---------------- | ------------------------------ |
+| Library Version  | 1.1.0                          |
+| Test Framework   | @dreamer/test@1.2.0            |
+| Test Date        | 2026-07-22                     |
+| Test Environment | Deno 2.x / Bun 1.x / Node 22.x |
 
 ---
 
@@ -15,19 +15,24 @@
 
 ### Overall Statistics
 
-| Metric         | Value |
-| -------------- | ----- |
-| Total Tests    | 71    |
-| Passed         | 71    |
-| Failed         | 0     |
-| Pass Rate      | 100%  |
-| Execution Time | ~15ms |
+| Metric         | Value                                     |
+| -------------- | ----------------------------------------- |
+| Total Tests    | 71 (Bun/Node) / 72 (Deno)                 |
+| Passed         | 71 (Bun/Node) / 72 (Deno)                 |
+| Failed         | 0                                         |
+| Pass Rate      | 100%                                      |
+| Execution Time | ~6ms (Deno) / ~36ms (Bun) / ~460ms (Node) |
+
+> Three-runtime verification (2026-07-22): `deno test -A tests/` → 72 passed;
+> `bun test tests/` → 71 passed; `npm run test:node` (`tsx --test`) → 71 passed.
+> Deno's extra case is the framework's implicit `@dreamer/test cleanup browsers`
+> teardown test. 0 failures across all three runtimes.
 
 ### Test File Statistics
 
-| Test File   | Count | Status  |
-| ----------- | ----- | ------- |
-| mod.test.ts | 71    | ✅ Pass |
+| Test File   | Deno | Bun | Node | Status  |
+| ----------- | ---- | --- | ---- | ------- |
+| mod.test.ts | 72   | 71  | 71   | ✅ Pass |
 
 ---
 

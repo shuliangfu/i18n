@@ -116,7 +116,14 @@ export const $t = (key: string, params?: TranslationParams): string => {
 /**
  * 全局 i18n 服务代理对象（便捷导出）
  *
- * 提供对 I18n 实例方法的代理访问
+ * 提供对 I18n 实例方法的代理访问：优先转发到 globalThis.$i18n（即 install()
+ * 挂载的实例），否则回退到默认单例 getI18n()。
+ *
+ * 【Why】原实现为每个 I18nService 方法手写一份「取全局 → 判空 → 转发/回退」
+ *   样板（200+ 行），方法越多越易漏写/写错。用 Proxy 统一在 get 陷阱里解析
+ *   目标实例并绑定 this，行为与原实现等价，但收敛到一处。
+ * 【Invariant】每次属性访问解析当前目标（g.$i18n ?? getI18n()），故 install/
+ *   uninstall 切换后立即生效；方法以 bind(target) 返回，解构调用仍保有 this。
  *
  * @example
  * ```typescript
@@ -130,224 +137,18 @@ export const $t = (key: string, params?: TranslationParams): string => {
  * console.log($i18n.getLocale()); // "en-US"
  * ```
  */
-export const $i18n: I18nService = {
-  /**
-   * 翻译函数
-   */
-  t: (key: string, params?: TranslationParams): string => {
+type AnyService = I18nService & Record<string | symbol, unknown>;
+export const $i18n: I18nService = new Proxy({} as I18nService, {
+  get(_target, prop: string | symbol): unknown {
     const g = getGlobalRef();
-    if (g.$i18n) {
-      return g.$i18n.t(key, params);
-    }
-    return getI18n().t(key, params);
+    const target = (g.$i18n ?? getI18n()) as AnyService;
+    const value = target[prop];
+    // 方法绑定 this 后返回，确保解构调用（const t = $i18n.t; t("k")）仍正确
+    return typeof value === "function"
+      ? (value as (...args: unknown[]) => unknown).bind(target)
+      : value;
   },
-
-  /**
-   * 获取当前语言
-   */
-  getLocale: (): string => {
-    const g = getGlobalRef();
-    if (g.$i18n) {
-      return g.$i18n.getLocale();
-    }
-    return getI18n().getLocale();
-  },
-
-  /**
-   * 设置当前语言
-   */
-  setLocale: (locale: string): boolean => {
-    const g = getGlobalRef();
-    if (g.$i18n) {
-      return g.$i18n.setLocale(locale);
-    }
-    return getI18n().setLocale(locale);
-  },
-
-  /**
-   * 获取支持的语言列表
-   */
-  getLocales: (): string[] => {
-    const g = getGlobalRef();
-    if (g.$i18n) {
-      return g.$i18n.getLocales();
-    }
-    return getI18n().getLocales();
-  },
-
-  /**
-   * 检查语言是否支持
-   */
-  isLocaleSupported: (locale: string): boolean => {
-    const g = getGlobalRef();
-    if (g.$i18n) {
-      return g.$i18n.isLocaleSupported(locale);
-    }
-    return getI18n().isLocaleSupported(locale);
-  },
-
-  /**
-   * 加载翻译数据
-   */
-  loadTranslations: (locale: string, data: Record<string, unknown>): void => {
-    const g = getGlobalRef();
-    if (g.$i18n) {
-      g.$i18n.loadTranslations(
-        locale,
-        data as import("./types.ts").TranslationData,
-      );
-      return;
-    }
-    getI18n().loadTranslations(
-      locale,
-      data as import("./types.ts").TranslationData,
-    );
-  },
-
-  /**
-   * 获取翻译数据
-   */
-  getTranslations: (locale?: string): import("./types.ts").TranslationData => {
-    const g = getGlobalRef();
-    if (g.$i18n) {
-      return g.$i18n.getTranslations(locale);
-    }
-    return getI18n().getTranslations(locale);
-  },
-
-  /**
-   * 检查翻译键是否存在
-   */
-  has: (key: string): boolean => {
-    const g = getGlobalRef();
-    if (g.$i18n) {
-      return g.$i18n.has(key);
-    }
-    return getI18n().has(key);
-  },
-
-  /**
-   * 格式化数字
-   */
-  formatNumber: (
-    value: number,
-    options?: Partial<import("./types.ts").NumberFormatOptions>,
-  ): string => {
-    const g = getGlobalRef();
-    if (g.$i18n) {
-      return g.$i18n.formatNumber(value, options);
-    }
-    return getI18n().formatNumber(value, options);
-  },
-
-  /**
-   * 格式化货币
-   */
-  formatCurrency: (value: number, currency?: string): string => {
-    const g = getGlobalRef();
-    if (g.$i18n) {
-      return g.$i18n.formatCurrency(value, currency);
-    }
-    return getI18n().formatCurrency(value, currency);
-  },
-
-  /**
-   * 格式化日期
-   */
-  formatDate: (
-    date: Date | number,
-    format?: "date" | "time" | "datetime" | string,
-  ): string => {
-    const g = getGlobalRef();
-    if (g.$i18n) {
-      return g.$i18n.formatDate(date, format);
-    }
-    return getI18n().formatDate(date, format);
-  },
-
-  /**
-   * 格式化相对时间
-   */
-  formatRelative: (date: Date | number): string => {
-    const g = getGlobalRef();
-    if (g.$i18n) {
-      return g.$i18n.formatRelative(date);
-    }
-    return getI18n().formatRelative(date);
-  },
-
-  /**
-   * 监听语言变化
-   */
-  onChange: (
-    callback: import("./types.ts").LocaleChangeCallback,
-  ): () => void => {
-    const g = getGlobalRef();
-    if (g.$i18n) {
-      return g.$i18n.onChange(callback);
-    }
-    return getI18n().onChange(callback);
-  },
-
-  /**
-   * 移除所有监听器
-   */
-  removeAllListeners: (): void => {
-    const g = getGlobalRef();
-    if (g.$i18n) {
-      g.$i18n.removeAllListeners();
-      return;
-    }
-    getI18n().removeAllListeners();
-  },
-
-  /**
-   * 异步加载翻译数据
-   */
-  loadTranslationsAsync: async (locale: string, url: string): Promise<void> => {
-    const g = getGlobalRef();
-    if (g.$i18n) {
-      await g.$i18n.loadTranslationsAsync(locale, url);
-      return;
-    }
-    await getI18n().loadTranslationsAsync(locale, url);
-  },
-
-  /**
-   * 检测浏览器/系统语言
-   */
-  detectLocale: (): string | null => {
-    const g = getGlobalRef();
-    if (g.$i18n) {
-      return g.$i18n.detectLocale();
-    }
-    return getI18n().detectLocale();
-  },
-
-  /**
-   * 清除翻译缓存
-   */
-  clearCache: (): void => {
-    const g = getGlobalRef();
-    if (g.$i18n) {
-      g.$i18n.clearCache();
-      return;
-    }
-    getI18n().clearCache();
-  },
-
-  /**
-   * 清除持久化缓存
-   */
-  clearPersistentCache: (): void => {
-    const g = getGlobalRef();
-    if (g.$i18n) {
-      g.$i18n.clearPersistentCache();
-      return;
-    }
-    getI18n().clearPersistentCache();
-  },
-};
+});
 
 // 默认导出
 export default I18n;

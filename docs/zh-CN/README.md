@@ -463,6 +463,19 @@ $i18n.formatNumber(1234.56);
 
 ## 📜 变更日志
 
+**[1.1.0]** - 2026-07-22
+
+- **新增**：Node.js（>=22）兼容——新增 `package.json`、`tsconfig.json`、
+  `.npmrc`（`@jsr` registry）及三端 CI 工作流（Deno/Bun/Node ×
+  Linux/macOS/Windows）。
+- **变更**：`detectLocale()` 在 Node/Bun 上读取 `process.env`（Deno 路径保留）；
+  `@dreamer/test` 升至 `^1.2.0`。
+- **性能**：`t()` 缓存键由两次计算改为一次；`formatNumber()` 千位分隔正则预编译
+  为模块常量；移除死代码 `lastIndex` 重置。
+- **安全**：`loadTranslationsAsync()` 校验响应为非空对象；`getStorage()` 改为
+  校验实际配置的存储。
+- **重构**：`$i18n` 转发样板替换为单个 `Proxy`。
+
 **[1.0.1]** - 2026-02-17
 
 - **新增**：`TranslationParams` 现支持 `boolean`（插值为 `"true"`/`"false"`）。

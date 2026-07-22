@@ -62,6 +62,12 @@ const HTML_ESCAPE_MAP: Record<string, string> = {
 const HTML_ESCAPE_REGEX = /[&<>"']/g;
 
 /**
+ * 千位分隔正则表达式（性能优化：预编译，避免每次 formatNumber 重新编译）
+ * 【Why】formatNumber 是热路径，原内联字面量每次调用都触发正则编译
+ */
+const THOUSANDS_REGEX = /\B(?=(\d{3})+(?!\d))/g;
+
+/**
  * 转义 HTML 特殊字符
  *
  * @param str - 要转义的字符串
@@ -248,8 +254,7 @@ export class I18n implements I18nService {
     const shouldEscape = this.escapeHtmlEnabled;
 
     // 使用预编译的正则表达式（性能优化）
-    // 注意：需要重置 lastIndex，因为使用了全局标志
-    INTERPOLATION_REGEX.lastIndex = 0;
+    // 注：String.prototype.replace 对全局正则始终从 0 匹配，不读 lastIndex
     return text.replace(INTERPOLATION_REGEX, (_, key) => {
       const value = params[key];
       if (value === undefined) {
@@ -332,26 +337,53 @@ export class I18n implements I18nService {
    * ```
    */
   t(key: string, params?: TranslationParams): string {
+    // 性能优化：缓存键只计算一次（getCacheKey 含 JSON.stringify，热路径上避免重复）
+    const cacheKey = this.cacheEnabled
+      ? this.getCacheKey(key, params)
+      : undefined;
+
     // 如果启用缓存，先检查缓存
-    if (this.cacheEnabled) {
-      const cacheKey = this.getCacheKey(key, params);
+    if (cacheKey !== undefined) {
       const cached = this.translationCache.get(cacheKey);
       if (cached !== undefined) {
         return cached;
       }
     }
 
+    // 解析翻译（当前语言 → 默认语言回退）
+    const result = this.resolveTranslation(key, params);
+    if (result !== undefined) {
+      if (cacheKey !== undefined) {
+        this.addToCache(cacheKey, result);
+      }
+      return result;
+    }
+
+    // 返回回退值
+    return this.handleMissingTranslation(key);
+  }
+
+  /**
+   * 解析翻译值（当前语言 → 默认语言回退）
+   *
+   * 【Why】从 t() 抽取，消除原实现中「当前语言」与「默认语言」两段几乎一致的
+   *   查找+插值+缓存写入样板；同时让缓存键只在 t() 计算一次。
+   * 【Invariant】返回 undefined 表示当前语言与默认语言均未命中，由调用方回退。
+   *
+   * @param key - 翻译键
+   * @param params - 替换参数
+   * @returns 翻译后的文本，或 undefined（未命中任何语言）
+   */
+  private resolveTranslation(
+    key: string,
+    params?: TranslationParams,
+  ): string | undefined {
     // 尝试从当前语言获取翻译
     const localeData = this.translations[this.currentLocale];
     if (localeData) {
       const value = this.getNestedValue(localeData, key);
       if (value) {
-        const result = this.interpolate(value, params);
-        // 缓存结果
-        if (this.cacheEnabled) {
-          this.addToCache(this.getCacheKey(key, params), result);
-        }
-        return result;
+        return this.interpolate(value, params);
       }
     }
 
@@ -361,18 +393,12 @@ export class I18n implements I18nService {
       if (defaultData) {
         const value = this.getNestedValue(defaultData, key);
         if (value) {
-          const result = this.interpolate(value, params);
-          // 缓存结果
-          if (this.cacheEnabled) {
-            this.addToCache(this.getCacheKey(key, params), result);
-          }
-          return result;
+          return this.interpolate(value, params);
         }
       }
     }
 
-    // 返回回退值
-    return this.handleMissingTranslation(key);
+    return undefined;
   }
 
   /**
@@ -499,7 +525,23 @@ export class I18n implements I18nService {
       );
     }
 
-    const data = await response.json() as TranslationData;
+    const raw = await response.json();
+
+    // 安全防护：校验返回数据是非空对象
+    // 【Why】原代码仅用 `as TranslationData` 做编译期断言，运行时不校验——
+    //   数组/字符串/null/数字等非对象 JSON 进入翻译流程后会在
+    //   getNestedValue/mergeDeep 处崩溃或污染存储。此处在入口拦截。
+    if (raw === null || typeof raw !== "object" || Array.isArray(raw)) {
+      const kind = raw === null
+        ? "null"
+        : Array.isArray(raw)
+        ? "array"
+        : typeof raw;
+      throw new Error(
+        `[I18n] 翻译数据格式错误: 期望对象，得到 ${kind}`,
+      );
+    }
+    const data = raw as TranslationData;
 
     // 4. 存入内存缓存
     this.loadedUrls.set(url, data);
@@ -514,14 +556,24 @@ export class I18n implements I18nService {
 
   /**
    * 获取持久化存储对象
+   *
+   * 【Why】原实现只检查 localStorage 存在性，但配置 sessionStorage 时却访问
+   *   sessionStorage——若 sessionStorage 未定义会返回 undefined（非 null），导致
+   *   调用方 storage.getItem 抛错。此处按实际使用的存储名校验。
+   * 【Invariant】存储不可用（未定义/访问抛错，如禁用 cookie）时返回 null，
+   *   由调用方静默降级为不持久化。
    */
   private getStorage(): Storage | null {
-    if (typeof globalThis.localStorage === "undefined") {
+    try {
+      const storageName = this.persistentCacheConfig.storage;
+      const storage = storageName === "sessionStorage"
+        ? globalThis.sessionStorage
+        : globalThis.localStorage;
+      return typeof storage === "undefined" ? null : storage;
+    } catch {
+      // 某些隐私模式下访问 storage 会抛错，静默降级
       return null;
     }
-    return this.persistentCacheConfig.storage === "sessionStorage"
-      ? globalThis.sessionStorage
-      : globalThis.localStorage;
   }
 
   /**
@@ -764,7 +816,7 @@ export class I18n implements I18nService {
 
     // 添加千位分隔符
     const formattedInt = intPart.replace(
-      /\B(?=(\d{3})+(?!\d))/g,
+      THOUSANDS_REGEX,
       opts.thousandsSeparator,
     );
 
@@ -987,28 +1039,41 @@ export class I18n implements I18nService {
       }
     }
 
-    // 服务端环境（Deno/Node）
-    if (typeof globalThis.Deno !== "undefined") {
-      const env = globalThis.Deno.env;
-      const langEnv = env.get?.("LC_ALL") || env.get?.("LANG") ||
-        env.get?.("LANGUAGE");
-      if (langEnv) {
-        // 解析环境变量（如 "zh_CN.UTF-8" -> "zh-CN"）
-        const match = langEnv.match(/^([a-z]{2})[-_]([A-Z]{2})/i);
-        if (match) {
-          const normalized = `${match[1].toLowerCase()}-${
-            match[2].toUpperCase()
-          }`;
-          if (this.localesSet.has(normalized)) {
-            return normalized;
-          }
+    // 服务端环境（Deno / Node / Bun）
+    // 【Why】i18n 不依赖 runtime-adapter（runtime-adapter 反向依赖 i18n，
+    //   引入会形成循环依赖），故此处按运行时全局对象直接读取环境变量。
+    // 【Invariant】Deno 优先用 globalThis.Deno.env.get；Node/Bun 用
+    //   globalThis.process.env；二者皆无时返回 null。
+    const g = globalThis as unknown as {
+      Deno?: { env: { get?(name: string): string | undefined } };
+      process?: { env: Record<string, string | undefined> };
+    };
+    let langEnv: string | undefined;
+    if (g.Deno) {
+      langEnv = g.Deno.env.get?.("LC_ALL") || g.Deno.env.get?.("LANG") ||
+        g.Deno.env.get?.("LANGUAGE");
+    } else if (g.process?.env) {
+      // Node / Bun：process.env 是字符串字典（非 Deno 的 Map 式 .get）
+      langEnv = g.process.env.LC_ALL || g.process.env.LANG ||
+        g.process.env.LANGUAGE;
+    }
+
+    if (langEnv) {
+      // 解析环境变量（如 "zh_CN.UTF-8" -> "zh-CN"）
+      const match = langEnv.match(/^([a-z]{2})[-_]([A-Z]{2})/i);
+      if (match) {
+        const normalized = `${match[1].toLowerCase()}-${
+          match[2].toUpperCase()
+        }`;
+        if (this.localesSet.has(normalized)) {
+          return normalized;
         }
-        // 尝试匹配主语言代码
-        const primary = langEnv.substring(0, 2).toLowerCase();
-        for (const locale of this.localesArray) {
-          if (locale.startsWith(primary + "-") || locale === primary) {
-            return locale;
-          }
+      }
+      // 尝试匹配主语言代码
+      const primary = langEnv.substring(0, 2).toLowerCase();
+      for (const locale of this.localesArray) {
+        if (locale.startsWith(primary + "-") || locale === primary) {
+          return locale;
         }
       }
     }

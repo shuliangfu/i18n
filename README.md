@@ -436,6 +436,19 @@ See [TEST_REPORT.md](./docs/en-US/TEST_REPORT.md) for details.
 
 ## 📜 Changelog
 
+**[1.1.0]** - 2026-07-22
+
+- **Added**: Node.js (>=22) support — `package.json`, `tsconfig.json`, `.npmrc`
+  (`@jsr` registry), and a three-runtime CI workflow (Deno/Bun/Node ×
+  Linux/macOS/Windows).
+- **Changed**: `detectLocale()` reads `process.env` on Node/Bun (Deno path
+  kept); `@dreamer/test` bumped to `^1.2.0`.
+- **Performance**: `t()` computes its cache key once (was twice);
+  `formatNumber()` hoists a precompiled regex; dead `lastIndex` reset removed.
+- **Security**: `loadTranslationsAsync()` validates the response is a non-null
+  object; `getStorage()` checks the actually-configured storage.
+- **Refactor**: `$i18n` delegation boilerplate replaced by a single `Proxy`.
+
 **[1.0.1]** - 2026-02-17
 
 - **Added**: `TranslationParams` now accepts `boolean` (interpolation as
