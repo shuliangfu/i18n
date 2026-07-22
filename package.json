@@ -16,8 +16,8 @@
     "test:node": "tsx --tsconfig tsconfig.json --test tests/*.test.ts"
   },
   "devDependencies": {
-    "@dreamer/test": "npm:@jsr/dreamer__test@^1.2.0",
-    "tsx": "^4.19.2"
+    "@dreamer/test": "npm:@jsr/dreamer__test@^1.2.1",
+    "tsx": "^4.23.1"
   },
   "engines": {
     "node": ">=22",

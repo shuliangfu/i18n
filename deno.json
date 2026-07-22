@@ -33,7 +33,7 @@
     }
   },
   "imports": {
-    "@dreamer/test": "jsr:@dreamer/test@^1.2.0"
+    "@dreamer/test": "jsr:@dreamer/test@^1.2.1"
   },
   "minimumDependencyAge": 0,
   "nodeModulesDir": "auto"
