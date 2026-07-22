@@ -302,7 +302,12 @@ describe("I18n 国际化库", () => {
 
     it("未来时间应该使用'后'", () => {
       const i18n = new I18n({ defaultLocale: "zh-CN" });
-      expect(i18n.formatRelative(Date.now() + 5 * 60 * 1000)).toBe("5 分钟后");
+      // 【Why】+30s 缓冲：Date.now() + 5*60*1000 是精确 5 分钟边界，
+      // formatRelative 内部 Math.floor(absDiff / MINUTE) 在任一 tick 延迟下
+      // 会将 299999ms 向下取整为 4 分钟。+30s 确保 Windows CI 慢速环境下仍为 5。
+      expect(i18n.formatRelative(Date.now() + (5 * 60 + 30) * 1000)).toBe(
+        "5 分钟后",
+      );
     });
   });
 

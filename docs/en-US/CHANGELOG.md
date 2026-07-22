@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.1.2] - 2026-07-22
+
+### Fixed
+
+- **`formatRelative` future-time test flakiness on Windows CI**: the test
+  `未来时间应该使用'后'` used `Date.now() + 5 * 60 * 1000` (exact 5-minute
+  boundary). `formatRelative` computes `Math.floor(absDiff / MINUTE)`, so any
+  tick of delay between timestamp creation and the internal `Date.now()` call
+  made `absDiff` 299999ms → floored to 4 minutes → "4 分钟后" instead of "5
+  分钟后". Added a 30-second buffer (`(5 * 60 + 30) * 1000`) so the test is
+  deterministic across all CI runners.
+
+---
+
 ## [1.1.1] - 2026-07-22
 
 ### Changed
