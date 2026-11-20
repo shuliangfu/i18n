@@ -464,6 +464,19 @@ describe("I18n 国际化库", () => {
       i18n.setLocale("en-US");
       expect(i18n.t("hello")).toBe("你好");
     });
+
+    it("空字符串译文应视为有效值，不回退到默认语言或键名", () => {
+      const i18n = createI18n({ defaultLocale: "en", locales: ["en", "fr"] });
+      i18n.loadTranslations("en", { title: "Title", unit: "items", sep: "" });
+      i18n.loadTranslations("fr", { title: "Titre", unit: "", sep: "" });
+      i18n.setLocale("fr");
+
+      expect(i18n.has("unit")).toBe(true);
+      expect(i18n.has("sep")).toBe(true);
+      expect(i18n.t("title")).toBe("Titre");
+      expect(i18n.t("unit")).toBe("");
+      expect(i18n.t("sep")).toBe("");
+    });
   });
 
   describe("安全防护", () => {

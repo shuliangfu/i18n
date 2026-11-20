@@ -281,7 +281,7 @@ export class I18n implements I18nService {
         const defaultData = this.translations[this.defaultLocale];
         if (defaultData) {
           const value = this.getNestedValue(defaultData, key);
-          if (value) return value;
+          if (value !== undefined) return value;
         }
         return key;
       }
@@ -382,7 +382,7 @@ export class I18n implements I18nService {
     const localeData = this.translations[this.currentLocale];
     if (localeData) {
       const value = this.getNestedValue(localeData, key);
-      if (value) {
+      if (value !== undefined) {
         return this.interpolate(value, params);
       }
     }
@@ -392,7 +392,7 @@ export class I18n implements I18nService {
       const defaultData = this.translations[this.defaultLocale];
       if (defaultData) {
         const value = this.getNestedValue(defaultData, key);
-        if (value) {
+        if (value !== undefined) {
           return this.interpolate(value, params);
         }
       }
