@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.1.3] - 2026-11-20
+
+### Fixed
+
+- **Empty-string translations:** `t()` and `has()` now treat `""` as a present
+  value. Previously, a falsy check (`if (value)`) made empty translations fall
+  back to the default locale or the key name. Lookup now uses
+  `value !== undefined`.
+
+---
+
 ## [1.1.2] - 2026-07-22
 
 ### Fixed
